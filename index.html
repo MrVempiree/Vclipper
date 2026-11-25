@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Vclipper — Browser Video Clipper & Editor</title>
+<meta name="description" content="Vclipper: clip, edit and export video entirely in your browser, with two pet assistants. Optional API-key mode for AI captions, highlight naming and video generation.">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<header class="topbar">
+  <div class="brand">V<span>clipper</span></div>
+  <div class="mode-switch">
+    <button id="modeLocal" class="mode active" type="button">Local mode</button>
+    <button id="modeApi" class="mode" type="button">API-key mode</button>
+  </div>
+</header>
+
+<main class="layout">
+  <section class="stage panel">
+    <div class="stage-head">
+      <div><h1>Clip &amp; edit in your browser</h1><div class="chips"><span class="chip">Local-first</span><span class="chip">AI highlights</span><span class="chip">Caption burn-in</span><span class="chip">WebM export</span><span class="chip">Bring your own API key</span></div></div>
+      <label class="upload-btn">Open video<input id="fileInput" type="file" accept="video/*" hidden></label>
+    </div>
+    <div class="preview-wrap">
+      <video id="preview" controls playsinline></video>
+      <canvas id="overlayCanvas" width="1280" height="720"></canvas>
+      <div id="emptyState" class="empty">Open a video to start. Everything runs locally — your file never leaves this tab.</div>
+    </div>
+    <canvas id="waveform" width="1200" height="90"></canvas>
+    <div class="timeline">
+      <label>Start <input id="startRange" type="range" min="0" max="100" step="0.1" value="0"><span id="startLabel">0.0s</span></label>
+      <label>End <input id="endRange" type="range" min="0" max="100" step="0.1" value="100"><span id="endLabel">0.0s</span></label>
+    </div>
+    <div class="row">
+      <button id="playClip" type="button">Play clip</button>
+      <button id="suggestBtn" type="button">AI highlight suggestions</button>
+      <button id="exportBtn" class="primary" type="button">Export clip (WebM)</button>
+    </div>
+    <div id="suggestions" class="suggestions"></div>
+    <p id="status" class="status" role="status"></p>
+  </section>
+
+  <aside class="panel controls">
+    <h2>Edit</h2>
+    <label>Speed
+      <select id="speedSel"><option>0.5</option><option>0.75</option><option selected>1</option><option>1.25</option><option>1.5</option><option>2</option></select>
+    </label>
+    <label>Brightness <input id="brightRange" type="range" min="50" max="150" value="100"></label>
+    <label>Contrast <input id="contrastRange" type="range" min="50" max="150" value="100"></label>
+    <label>Saturation <input id="satRange" type="range" min="0" max="200" value="100"></label>
+    <label>Caption text <input id="captionText" type="text" placeholder="Type a caption to burn in"></label>
+    <label class="check"><input id="muteCheck" type="checkbox"> Mute audio in export</label>
+
+    
+    <h2>Transform</h2>
+    <label>Aspect / crop
+      <select id="aspectSel"><option value="original" selected>Original</option><option value="9:16">9:16 vertical</option><option value="16:9">16:9 wide</option><option value="1:1">1:1 square</option><option value="4:5">4:5 portrait</option></select>
+    </label>
+    <div class="row">
+      <button id="rotateBtn" type="button">Rotate 90°</button>
+      <button id="flipHBtn" type="button">Flip ↔</button>
+      <button id="flipVBtn" type="button">Flip ↕</button>
+    </div>
+    <label>Filter preset
+      <select id="presetSel"><option value="none" selected>None</option><option value="vivid">Vivid</option><option value="mono">Mono</option><option value="warm">Warm</option><option value="cool">Cool</option><option value="vintage">Vintage</option></select>
+    </label>
+    <label>Volume <input id="volumeRange" type="range" min="0" max="100" value="100"></label>
+    <label class="check"><input id="fadeInCheck" type="checkbox"> Fade in (export)</label>
+    <label class="check"><input id="fadeOutCheck" type="checkbox"> Fade out (export)</label>
+    <label class="check"><input id="loopCheck" type="checkbox"> Loop clip preview</label>
+    <div class="row">
+      <button id="frameBtn" type="button">Capture frame (PNG)</button>
+      <button id="resetBtn" type="button">Reset edits</button>
+    </div>
+
+    <div id="apiPanel" class="api-panel hidden">
+      <h2>API-key mode</h2>
+      <p class="hint">Your key is stored only in this browser (localStorage) and sent only to the endpoint you set.</p>
+      <label>Endpoint base URL <input id="apiBase" type="url" placeholder="https://api.openai.com/v1"></label>
+      <label>API key <input id="apiKey" type="password" placeholder="sk-..." autocomplete="off"></label>
+      <label>Chat model <input id="apiModel" type="text" placeholder="gpt-4o-mini"></label>
+      <button id="saveKey" type="button">Save key locally</button>
+      <button id="aiTitles" type="button">AI: name my highlights</button>
+      <h3>Generate video</h3>
+      <label>Video endpoint <input id="videoEndpoint" type="url" placeholder="https://your-provider.example/generate"></label>
+      <label>Prompt <input id="videoPrompt" type="text" placeholder="A drone shot over a coastline at dawn"></label>
+      <button id="genVideo" type="button">Generate with my key</button>
+      <div id="genResult"></div>
+    </div>
+  </aside>
+</main>
+
+
+<div class="pet-dock" aria-label="Pet assistant">
+  <div class="pet-bubble" id="petBubble">Main tumhara editing pet hu. Bolo kya karu — clip kaatna, caption, speed, export, sab kar dunga.</div>
+  <div class="pet-row">
+    <div class="pet-avatar" id="petAvatar" aria-hidden="true"><span class="pet-wing left"></span><span class="pet-wing right"></span><span class="pet-eye left"></span><span class="pet-eye right"></span><span class="pet-mouth"></span></div>
+    <input id="petInput" type="text" placeholder="Pet ko bolo: clip 10 se 25 second…">
+    <button id="petSend" class="primary" type="button">Bolo</button>
+  </div>
+  <div class="pet-switch" id="petSwitch">
+    <button type="button" class="pet-choice active" data-pet-name="Gravion">Gravion</button>
+    <button type="button" class="pet-choice" data-pet-name="Vempire">Vempire</button>
+    <button type="button" class="pet-choice" data-pet-name="Mochi">Mochi</button>
+    <button type="button" class="pet-choice" data-pet-name="Whiskers">Whiskers</button>
+    <button type="button" class="pet-choice" data-pet-name="Hoot">Prof. Hoot</button>
+    <button type="button" class="pet-choice" data-pet-name="Nova">Nova</button>
+    <button type="button" class="pet-choice" data-pet-name="Rasgulla">Rasgulla</button>
+    <button type="button" class="pet-choice" data-pet-name="Jalebi">Jalebi</button>
+    <button type="button" class="pet-choice" data-pet-name="Panda">Panda</button>
+    <button type="button" class="pet-choice" data-pet-name="Biscuit">Biscuit</button>
+  </div>
+  <div class="pet-chips">
+    <button type="button" data-pet="highlight dhundho">Highlight dhundho</button>
+    <button type="button" data-pet="speed 1.5">Speed 1.5x</button>
+    <button type="button" data-pet="caption Mera Clip">Caption lagao</button>
+    <button type="button" data-pet="export karo">Export karo</button>
+  </div>
+</div>
+
+<footer>Vclipper — local-first clipping. No uploads, no tracking.</footer>
+<script src="app.js"></script>
+</body>
+</html>
